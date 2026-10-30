@@ -24,9 +24,16 @@ typedef struct {
 
 // Function signatures for worker threads
 extern void* sorting_worker(void* arg);
-extern void* merging_worker(void* arg);
+// extern void* merging_worker(void* arg);
 
 int main(void) {
+  printf("Unsorted input array:\n");
+  for (int i = 0; i < SIZE; i++) {
+    printf("%d ", input_array[i]);
+  }
+  printf("\n");
+  printf("Sorted sub-array 1:\n");
+
   // Declares threads
   pthread_t thread1, thread2, thread3;
   // Will be used to check for system call errors
@@ -77,10 +84,50 @@ int main(void) {
   }
 
   // Wait for sorting to happen
+  pthread_join(thread1, NULL);
+  pthread_join(thread2, NULL);
+
+
+  // TEST SORTED SUB-ARRAYS
+  // int *sub_array1 = params1->sub_array_start;
+  // int *sub_array2 = params2->sub_array_start;
+  // int size1 = params1->size;
+  // int size2 = params2->size;
+
+  // for (int i = 0; i < size1; i++) {
+  //   printf("%d ", sub_array1[i]);
+  // }
+
+  // printf("\n");
+  // printf("Sorted sub-array 2:\n");
+
+  // for (int i = 0; i < size2; i++) {
+  //   printf("%d ", sub_array2[i]);
+  // }
+  // printf("\n");
 
   // Launch the merge thread
 
   // Wait for merge and handle heap
 
   return 0;
+}
+
+extern void* sorting_worker(void* arg) {
+  SortParams *params = (SortParams *) arg;
+  int *sub_array = params->sub_array_start;
+  int size = params->size;
+
+  // Perform insertion sort on the sub-array
+  for (int i = 1; i < size; i++) {
+    int key = sub_array[i];
+    int j = i - 1;
+    while (j >= 0 && sub_array[j] > key) {
+      sub_array[j + 1] = sub_array[j];
+      j--;
+    }
+    sub_array[j + 1] = key;
+  }
+
+  return NULL;
 }
