@@ -24,7 +24,7 @@ typedef struct {
 
 // Function signatures for worker threads
 extern void* sorting_worker(void* arg);
-// extern void* merging_worker(void* arg);
+ extern void* merging_worker(void* arg);
 
 int main(void) {
   printf("Unsorted input array:\n");
@@ -127,6 +127,31 @@ extern void* sorting_worker(void* arg) {
       j--;
     }
     sub_array[j + 1] = key;
+  }
+
+  return NULL;
+}
+void* merging_worker(void* arg) {
+  const MergeParams *params = arg;
+  const SortParams *left = params->left_chunk;
+  const SortParams *right = params->right_chunk;
+  int i = 0, j = 0, k = 0;
+
+  // Merge the two sorted chunks into result_array.
+  while (i < left->size && j < right->size) {
+    if (left->sub_array_start[i] <= right->sub_array_start[j]) {
+      result_array[k++] = left->sub_array_start[i++];
+    } else {
+      result_array[k++] = right->sub_array_start[j++];
+    }
+  }
+
+  // Copy any remaining elements.
+  while (i < left->size) {
+    result_array[k++] = left->sub_array_start[i++];
+  }
+  while (j < right->size) {
+    result_array[k++] = right->sub_array_start[j++];
   }
 
   return NULL;
