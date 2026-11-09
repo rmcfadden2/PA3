@@ -23,16 +23,14 @@ typedef struct {
 } MergeParams;
 
 // Function signatures for worker threads
-extern void* sorting_worker(void* arg);
- extern void* merging_worker(void* arg);
+void* sorting_worker(void* arg);
+void* merging_worker(void* arg);
 
 int main(void) {
   printf("Unsorted input array:\n");
   for (int i = 0; i < SIZE; i++) {
     printf("%d ", input_array[i]);
   }
-  printf("\n");
-  printf("Sorted sub-array 1:\n");
 
   // Declares threads
   pthread_t thread1, thread2, thread3;
@@ -60,10 +58,7 @@ int main(void) {
   rc = pthread_create(&thread1, NULL, sorting_worker, (void*)params1);
   // Checks for creation errors
   if (rc != 0) {
-    // Delete later
     fprintf(stderr, "Error: Failed to create sorting thread 1 (Code: %d)\n", rc);
-
-
     // Handles memory
     free(params1);
     free(params2);
@@ -73,47 +68,73 @@ int main(void) {
   rc = pthread_create(&thread2, NULL, sorting_worker, (void*)params2);
   // Checks for creation errors
   if (rc != 0) {
-    // Delete later
     fprintf(stderr, "Error: Failed to create sorting thread 2 (Code: %d)\n", rc);
 
     // Handles memory
-    pthread_join(thread1, NULL);
+    rc = pthread_join(thread1, NULL);
+    if (rc != 0) {
+      fprintf(stderr, "Error: Failed to join sorting thread 1 (Code: %d)\n", rc);
+      return EXIT_FAILURE;
+    }
     free(params1);
     free(params2);
     return EXIT_FAILURE;
   }
 
   // Wait for sorting to happen
-  pthread_join(thread1, NULL);
-  pthread_join(thread2, NULL);
+  rc = pthread_join(thread1, NULL);
+  if (rc != 0) {
+    fprintf(stderr, "Error: Failed to join sorting thread 1 (Code: %d)\n", rc);
+    return EXIT_FAILURE;
+  }
 
-
-  // TEST SORTED SUB-ARRAYS
-  // int *sub_array1 = params1->sub_array_start;
-  // int *sub_array2 = params2->sub_array_start;
-  // int size1 = params1->size;
-  // int size2 = params2->size;
-
-  // for (int i = 0; i < size1; i++) {
-  //   printf("%d ", sub_array1[i]);
-  // }
-
-  // printf("\n");
-  // printf("Sorted sub-array 2:\n");
-
-  // for (int i = 0; i < size2; i++) {
-  //   printf("%d ", sub_array2[i]);
-  // }
-  // printf("\n");
+  rc = pthread_join(thread2, NULL);
+  if (rc != 0) {
+    fprintf(stderr, "Error: Failed to join sorting thread 2 (Code: %d)\n", rc);
+    return EXIT_FAILURE;
+  }
 
   // Launch the merge thread
+  MergeParams *merge_params = (MergeParams *) malloc(sizeof(MergeParams));
+  if (merge_params == NULL) {
+    fprintf(stderr, "Error: Failed to allocate memory for merge parameters\n");
+    free(params1);
+    free(params2);
+    return EXIT_FAILURE;
+  }
 
+  merge_params->left_chunk = params1;
+  merge_params->right_chunk = params2;
+  rc = pthread_create(&thread3, NULL, merging_worker, (void*) merge_params);
+  if(rc != 0) {
+    fprintf(stderr, "Error: Failed to create merging thread (Code: %d)\n", rc);
+    free(params1);
+    free(params2);
+    free(merge_params);
+    return EXIT_FAILURE;
+  }
+  
   // Wait for merge and handle heap
+  rc = pthread_join(thread3, NULL);
+  if (rc != 0) {
+    fprintf(stderr, "Error: Failed to join merging thread (Code: %d)\n", rc);
+    return EXIT_FAILURE;
+  }
+
+  printf("\nSorted result array:\n");
+  for (int i = 0; i < SIZE; i++) {
+    printf("%d ", result_array[i]);
+  }
+  printf("\n");
+
+  free(params1);
+  free(params2);
+  free(merge_params);
 
   return 0;
 }
 
-extern void* sorting_worker(void* arg) {
+void* sorting_worker(void* arg) {
   SortParams *params = (SortParams *) arg;
   int *sub_array = params->sub_array_start;
   int size = params->size;
